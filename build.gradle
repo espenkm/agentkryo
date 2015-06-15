@@ -1,0 +1,40 @@
+plugins {
+	id 'java' 
+	id 'com.github.johnrengelman.shadow' version '1.2.1'
+	id 'eclipse'
+	id 'idea'
+  }
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	compile "net.bytebuddy:byte-buddy:0.6.8"
+	compile "com.google.guava:guava:18.0"
+	compile "com.esotericsoftware:kryo:3.0.1"
+	
+	testCompile "net.bytebuddy:byte-buddy-agent:0.6.8"
+	testCompile 'junit:junit:4.12'
+}
+
+shadowJar {
+	baseName = 'agentkryo'
+	classifier = '0.1'
+}
+
+jar {
+	manifest {
+	  attributes(
+		  "Agent-Class": "agentkryo.AgentKryo",
+		  "Can-Redefine-Classes": true,
+		  "Can-Retransform-Classes": true,
+		  "Boot-Class-Path": "agentkryo-0.1.jar",
+		  "Premain-Class": "agentkryo.AgentKryo"
+	  )
+	}
+ }
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.4'
+}
