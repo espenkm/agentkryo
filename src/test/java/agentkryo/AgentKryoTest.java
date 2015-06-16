@@ -15,7 +15,7 @@ import com.google.common.collect.Lists;
 public class AgentKryoTest {
 	
 	private static final String rootDir = System.getProperty("java.io.tmpdir") + "/AgentKryoTest";
-	private static final String classStartsWith = ",agentkryo.Test";
+	private static final String classStartsWith = ",agentkryo.TestFoo";
 
 	@BeforeClass
 	public static void instrument() {
@@ -42,10 +42,10 @@ public class AgentKryoTest {
 	@Test
 	public void shouldInteceptCallsWithParameters() {
 		TestFoo foo = new TestFoo();
-		assertEquals("into", foo.getBar(0));
-		assertEquals("broke", foo.getBar(1));
-		assertEquals("into", foo.getBar(0));
-		assertEquals("home", foo.getBar(2));
+		assertEquals("into", foo.getFoo(0));
+		assertEquals("broke", foo.getFoo(1));
+		assertEquals("into", foo.getFoo(0));
+		assertEquals("home", foo.getFoo(2));
 	}
 
 	private static void deleteDir(File dir) {

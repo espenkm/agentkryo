@@ -1,19 +1,12 @@
 package agentkryo;
 
-import static org.junit.Assert.assertEquals;
-
 import java.io.File;
-import java.util.List;
 import java.util.concurrent.Callable;
-
-import net.bytebuddy.agent.ByteBuddyAgent;
 
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import com.google.common.collect.Lists;
 
 public class KyroDiskCacheTest {
 
@@ -44,8 +37,7 @@ public class KyroDiskCacheTest {
 		Assert.assertTrue("File was not created " + cache.getFileName(), file.exists());
 		Assert.assertEquals(Integer.valueOf(1), cache.call());
 		
-		file.delete();
-		
+		Assert.assertTrue(file.delete());
 		Assert.assertEquals(Integer.valueOf(2), cache.call());
 	}
 	
