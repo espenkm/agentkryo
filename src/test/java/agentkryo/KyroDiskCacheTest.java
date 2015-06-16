@@ -62,9 +62,9 @@ public class KyroDiskCacheTest {
 		
 		File file = new File(cache.getFileName());
 		
-		Assert.assertEquals(2, ((TestBar[])cache.call()).length);
+		Assert.assertEquals(3, ((TestBar[])cache.call()).length);
 		Assert.assertTrue("File was not created " + cache.getFileName(), file.exists());
-		Assert.assertEquals(2, ((TestBar[])cache.call()).length);
+		Assert.assertEquals(3, ((TestBar[])cache.call()).length);
 	}
 	
 	private void deleteDir(File dir) {

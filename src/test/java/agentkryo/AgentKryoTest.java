@@ -7,7 +7,7 @@ import java.util.List;
 
 import net.bytebuddy.agent.ByteBuddyAgent;
 
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;
@@ -15,16 +15,16 @@ import com.google.common.collect.Lists;
 public class AgentKryoTest {
 	
 	private static final String rootDir = System.getProperty("java.io.tmpdir") + "/AgentKryoTest";
+	private static final String classStartsWith = ",agentkryo.Test";
 
-	@Before
-	public void cleanFiles() {
+	@BeforeClass
+	public static void instrument() {
 		deleteDir(new File(rootDir));
+		AgentKryo.premain(rootDir + classStartsWith,  ByteBuddyAgent.installOnOpenJDK());
 	}
 
 	@Test
-	public void shouldInteceptCalls() {
-		AgentKryo.premain(rootDir + ";agentkryo.Test",  ByteBuddyAgent.installOnOpenJDK());
-		
+	public void shouldInteceptCalls() throws Exception {
 		TestFoo foo = new TestFoo();
 		assertEquals(Integer.valueOf(1), foo.getNumberOfCalls());
 		assertEquals(Integer.valueOf(1), foo.getNumberOfCalls());
@@ -32,8 +32,6 @@ public class AgentKryoTest {
 	
 	@Test
 	public void shouldInteceptCallsWithArrays() {
-		AgentKryo.premain(rootDir + ";agentkryo.Test", ByteBuddyAgent.installOnOpenJDK());
-		
 		TestFoo foo = new TestFoo();
 		List<TestBar> actual = Lists.newArrayList(foo.getBars());
 		List<TestBar> expected = Lists.newArrayList(foo.getBars());
@@ -43,15 +41,14 @@ public class AgentKryoTest {
 	
 	@Test
 	public void shouldInteceptCallsWithParameters() {
-		AgentKryo.premain(rootDir + ";agentkryo.Test", ByteBuddyAgent.installOnOpenJDK());
-		
 		TestFoo foo = new TestFoo();
-		assertEquals("into", foo.getBars(0));
-		assertEquals("broke", foo.getBars(1));
-		assertEquals("into", foo.getBars(0));
+		assertEquals("into", foo.getBar(0));
+		assertEquals("broke", foo.getBar(1));
+		assertEquals("into", foo.getBar(0));
+		assertEquals("home", foo.getBar(2));
 	}
 
-	private void deleteDir(File dir) {
+	private static void deleteDir(File dir) {
 		if (dir.isDirectory()) {
 			String[] children = dir.list();
 			for (String child : children) {
@@ -61,5 +58,4 @@ public class AgentKryoTest {
 		
 		dir.delete();
 	}
-	
 }

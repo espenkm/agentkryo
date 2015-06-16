@@ -16,7 +16,9 @@ public class KryoDiskCache {
 	
 	private ThreadLocal<Kryo> kryos = new ThreadLocal<Kryo>() {
 	    protected Kryo initialValue() {
-	        return new Kryo();
+	        Kryo kryo = new Kryo();
+	        kryo.setAsmEnabled(true);
+			return kryo;
 	    };
 	};
 
@@ -55,8 +57,9 @@ public class KryoDiskCache {
 				storeToDisk(file, kryo, result);
 			}
 		} catch (Exception e) {
-			System.out.println(fileName + ": " + e);
-		}
+			e.printStackTrace();
+			//System.out.println(fileName + ": " + e);
+		} 
 
 		return result;
 	}
@@ -68,16 +71,25 @@ public class KryoDiskCache {
 	private void storeToDisk(final File file, final Kryo kryo, final Object objectToStore) throws Exception {
 		Output output = new Output(new FileOutputStream(file));
 		
-		if (method.getReturnType().isArray()) {
-			kryo.writeObject(output, objectToStore);
-		} else {
+		try {
 			kryo.writeClassAndObject(output, objectToStore);
+		} finally {
+			if (output != null) {
+				output.flush();
+				output.close();
+			}
 		}
-		
-		output.close();
 	}
 
 	private Object reloadFromDisk(Kryo kryo, File file) throws Exception {
-		return kryo.readObject(new Input(new FileInputStream(file)), method.getReturnType());
+		Input input = null;
+		try {
+			input = new Input(new FileInputStream(file));
+			return kryo.readClassAndObject(input);
+		} finally {
+			if (input != null) {
+				input.close();
+			}
+		}
 	}
 }

@@ -27,7 +27,7 @@ public class AgentKryo {
 	private static String startsWith; 
 	
 	public static void premain(final String agentArgs, Instrumentation inst) {
-		List<String> args = Lists.newArrayList(Splitter.on(";").split(agentArgs));
+		List<String> args = Lists.newArrayList(Splitter.on(",").split(agentArgs));
 		rootDir = args.get(0);
 		startsWith = args.get(1);
 		
@@ -59,7 +59,7 @@ public class AgentKryo {
 	public static class CachingInterceptor {
 		@RuntimeType
 		public static Object intercept(@AllArguments Object[] args, @Origin Method method, @SuperCall Callable<?> superCallable) throws Exception {
-			if (method.getName().equals("toString") || method.getName().equals("hashCode") || !Modifier.isPublic(method.getModifiers())) {
+			if (method.getName().equals("toString") || method.getName().equals("equals")  || method.getName().equals("hashCode") || !Modifier.isPublic(method.getModifiers())) {
 				return superCallable.call();
 			}
 			
