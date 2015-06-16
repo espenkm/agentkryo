@@ -12,6 +12,7 @@ import net.bytebuddy.implementation.bind.annotation.AllArguments;
 import net.bytebuddy.implementation.bind.annotation.Origin;
 import net.bytebuddy.implementation.bind.annotation.RuntimeType;
 import net.bytebuddy.implementation.bind.annotation.SuperCall;
+import net.bytebuddy.implementation.bind.annotation.This;
 import net.bytebuddy.matcher.ElementMatcher;
 import net.bytebuddy.matcher.ElementMatchers;
 
@@ -46,8 +47,8 @@ public class AgentKryo {
  
 	public static class CachingInterceptor {
 		@RuntimeType
-		public static Object intercept(@Origin String signature, @AllArguments Object[] allArguments, @Origin Method method, @SuperCall Callable<?> zuper) throws Exception {
-			return new KryoDiskCache("/tmp/agentkryo/", method.getName() + "(" + Joiner.on("::").join(allArguments)  + ")", method.getReturnType(), zuper).call();
+		public static Object intercept(@AllArguments Object[] args, @This Object obj,  @Origin Method method) throws Exception {
+			return new KryoDiskCache("/tmp/agentkryo/", obj, method, args).call();
 		}
 	}
 

@@ -4,27 +4,32 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Method;
 import java.util.concurrent.Callable;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
+import com.google.common.base.Joiner;
 
 public class KryoDiskCache {
 
 	private String rootDir;
 
-	private Callable<?> decoratedClazz;
-
 	private String signature;
 
-	private Class<?> returnType;
+	private Object that;
 
-	public KryoDiskCache(String rootDir, String signature, Class<?> returnType, Callable<?> decoratedClazz) {
+	private Object[] args;
+
+	private Method method;
+
+	public KryoDiskCache(String rootDir, Object obj, Method method, Object[] args) {
 		this.rootDir = rootDir;
-		this.signature = signature;
-		this.returnType = returnType;
-		this.decoratedClazz = decoratedClazz;
+		this.signature = method.getClass().getCanonicalName() + "." + method.getName() + "(" + Joiner.on("::").join(args)  + ")";
+		this.args = args;
+		this.method = method;
+		this.that = obj;
 	}
 
 	public Object call() {
@@ -40,7 +45,7 @@ public class KryoDiskCache {
 				result = reloadFromDisk(kryo, file);
 			} else {
 				file.createNewFile();
-				result = decoratedClazz.call();
+				result =  method.invoke(that, args);
 				storeToDisk(file, kryo, result);
 			}
 		} catch (Exception e) {
@@ -51,7 +56,7 @@ public class KryoDiskCache {
 	}
 
 	protected String getFileName() throws UnsupportedEncodingException {
-		return rootDir + java.net.URLEncoder.encode(decoratedClazz.getClass().getName() + "." + signature + ".cache", "UTF-8");
+		return rootDir + java.net.URLEncoder.encode(signature + ".cache", "UTF-8");
 	}
 
 	private void storeToDisk(final File file, final Kryo kryo, final Object result) throws Exception {
@@ -68,11 +73,6 @@ public class KryoDiskCache {
 	}
 
 	private Object reloadFromDisk(Kryo kryo, File file) throws Exception {
-		return kryo.readObject(new Input(new FileInputStream(file)), returnType);
-	}
-
-	@Override
-	public String toString() {
-		return "FromDiskCacheLoader [actualLoader=" + decoratedClazz.getClass().getName() + ", rootDir=" + rootDir + "]";
+		return kryo.readObjectOrNull(new Input(new FileInputStream(file)), method.getReturnType());
 	}
 }
