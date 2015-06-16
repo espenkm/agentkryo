@@ -13,23 +13,26 @@ import com.esotericsoftware.kryo.io.Output;
 import com.google.common.base.Joiner;
 
 public class KryoDiskCache {
+	
+	private ThreadLocal<Kryo> kryos = new ThreadLocal<Kryo>() {
+	    protected Kryo initialValue() {
+	        return new Kryo();
+	    };
+	};
 
 	private String rootDir;
 
 	private String signature;
 
-	private Object that;
-
-	private Object[] args;
-
 	private Method method;
 
-	public KryoDiskCache(String rootDir, Object obj, Method method, Object[] args) {
+	private Callable<?> called;
+
+	public KryoDiskCache(String rootDir, Method method, Object[] args, Callable<?> called) {
 		this.rootDir = rootDir;
+		this.called = called;
 		this.signature = method.getClass().getCanonicalName() + "." + method.getName() + "(" + Joiner.on("::").join(args)  + ")";
-		this.args = args;
 		this.method = method;
-		this.that = obj;
 	}
 
 	public Object call() {
@@ -37,15 +40,18 @@ public class KryoDiskCache {
 		String fileName = null;
 		
 		try {
-			Kryo kryo = new Kryo();
+			Kryo kryo = kryos.get();
 			fileName = getFileName();
 			File file = new File(fileName);
 
 			if (file.exists()) {
 				result = reloadFromDisk(kryo, file);
 			} else {
-				file.createNewFile();
-				result =  method.invoke(that, args);
+				result = called.call(); 
+				if (!file.createNewFile()) {
+					System.out.println("Unable to create file :" + file.getName());
+				}
+				
 				storeToDisk(file, kryo, result);
 			}
 		} catch (Exception e) {
@@ -56,23 +62,22 @@ public class KryoDiskCache {
 	}
 
 	protected String getFileName() throws UnsupportedEncodingException {
-		return rootDir + java.net.URLEncoder.encode(signature + ".cache", "UTF-8");
+		return rootDir + "/" + java.net.URLEncoder.encode(signature + ".cache", "UTF-8");
 	}
 
-	private void storeToDisk(final File file, final Kryo kryo, final Object result) throws Exception {
+	private void storeToDisk(final File file, final Kryo kryo, final Object objectToStore) throws Exception {
 		Output output = new Output(new FileOutputStream(file));
 		
-		try {
-			kryo.writeObject(output, result);
-		} catch (Exception ex) {
-			System.out.println(ex);
-			file.delete();
-		} finally {
-			output.close();
+		if (method.getReturnType().isArray()) {
+			kryo.writeObject(output, objectToStore);
+		} else {
+			kryo.writeClassAndObject(output, objectToStore);
 		}
+		
+		output.close();
 	}
 
 	private Object reloadFromDisk(Kryo kryo, File file) throws Exception {
-		return kryo.readObjectOrNull(new Input(new FileInputStream(file)), method.getReturnType());
+		return kryo.readObject(new Input(new FileInputStream(file)), method.getReturnType());
 	}
 }

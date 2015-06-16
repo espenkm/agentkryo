@@ -1,48 +1,83 @@
 package agentkryo;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.File;
+import java.util.List;
 import java.util.concurrent.Callable;
 
+import net.bytebuddy.agent.ByteBuddyAgent;
+
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
+import com.google.common.collect.Lists;
+
 public class KyroDiskCacheTest {
-	
+
+	private static final String rootDir = System.getProperty("java.io.tmpdir") + "/KyroDiskCacheTest";
+
+	@Before
+	@After
+	public void cleanFiles() {
+		File dir = new File(rootDir);
+		deleteDir(dir);
+		dir.mkdirs();
+	}
+
 	@Test
 	public void callOnUncachedObjectShouldPersistToDisk() throws Exception {
-		Foo decoratedClazz = new Foo();
+		final TestFoo decoratedClazz = new TestFoo();
 		
-		KryoDiskCache cache = new KryoDiskCache("/tmp/test/", "call", String.class, decoratedClazz); 
+		KryoDiskCache cache = new KryoDiskCache(rootDir, decoratedClazz.getClass().getMethod("getNumberOfCalls"), new Object[0], new Callable<Integer>() {
+			@Override
+			public Integer call() throws Exception {
+				return decoratedClazz.getNumberOfCalls();
+			}
+		}); 
+		
 		File file = new File(cache.getFileName());
 		
-		cleanUp(file);
+		Assert.assertEquals(Integer.valueOf(1), cache.call());
+		Assert.assertTrue("File was not created " + cache.getFileName(), file.exists());
+		Assert.assertEquals(Integer.valueOf(1), cache.call());
 		
-		try {
-			Assert.assertEquals("This is a test", cache.call());
-			Assert.assertEquals(1, decoratedClazz.calls);
-			
-			Assert.assertTrue("File was not created " + cache.getFileName(), file.exists());
-			
-			Assert.assertEquals("This is a test", cache.call());
-			Assert.assertEquals(1, decoratedClazz.calls);
-		} finally {
-			cleanUp(file);
-		}
-	}
-
-	private void cleanUp(File file) {
-		if (file.exists()) {
-			file.delete();
-		}
-	}
-
-	private static class Foo implements Callable<String> {
-		private int calls = 0;
+		file.delete();
 		
-		@Override
-		public String call() throws Exception {
-			calls++;
-			return "This is a test";
-		}
+		Assert.assertEquals(Integer.valueOf(2), cache.call());
 	}
+	
+	@Test
+	public void shouldInteceptCallsWithArrays() throws Exception {
+		final TestFoo decoratedClazz = new TestFoo();
+		
+		KryoDiskCache cache = new KryoDiskCache(rootDir, decoratedClazz.getClass().getMethod("getBars"), new Object[0], new Callable<TestBar[]>() {
+			@Override
+			public TestBar[] call() throws Exception {
+				return decoratedClazz.getBars();
+			}
+		}); 
+		
+		File file = new File(cache.getFileName());
+		
+		Assert.assertEquals(2, ((TestBar[])cache.call()).length);
+		Assert.assertTrue("File was not created " + cache.getFileName(), file.exists());
+		Assert.assertEquals(2, ((TestBar[])cache.call()).length);
+	}
+	
+	private void deleteDir(File dir) {
+		if (dir.isDirectory()) {
+			String[] children = dir.list();
+			for (String child : children) {
+				deleteDir(new File(dir, child));
+			}
+		}
+		
+		dir.delete();
+	}
+	
 }
+
+

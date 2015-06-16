@@ -2,66 +2,64 @@ package agentkryo;
 
 import static org.junit.Assert.assertEquals;
 
-import java.lang.instrument.Instrumentation;
-import java.util.ArrayList;
+import java.io.File;
 import java.util.List;
 
 import net.bytebuddy.agent.ByteBuddyAgent;
 
+import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;
 
 public class AgentKryoTest {
+	
+	private static final String rootDir = System.getProperty("java.io.tmpdir") + "/AgentKryoTest";
+
+	@Before
+	public void cleanFiles() {
+		deleteDir(new File(rootDir));
+	}
 
 	@Test
 	public void shouldInteceptCalls() {
-		Instrumentation installOnOpenJDK = ByteBuddyAgent.installOnOpenJDK();
-		AgentKryo.premain("agentkryo.AgentKryoTest", installOnOpenJDK);
+		AgentKryo.premain(rootDir + ";agentkryo.Test",  ByteBuddyAgent.installOnOpenJDK());
 		
-		Foo foo = new Foo();
-		assertEquals(1, foo.getNumberOfCalls().intValue());
-		assertEquals(1, foo.getNumberOfCalls().intValue());
+		TestFoo foo = new TestFoo();
+		assertEquals(Integer.valueOf(1), foo.getNumberOfCalls());
+		assertEquals(Integer.valueOf(1), foo.getNumberOfCalls());
 	}
 	
 	@Test
 	public void shouldInteceptCallsWithArrays() {
-		Instrumentation installOnOpenJDK = ByteBuddyAgent.installOnOpenJDK();
-		AgentKryo.premain("agentkryo.AgentKryoTest", installOnOpenJDK);
+		AgentKryo.premain(rootDir + ";agentkryo.Test", ByteBuddyAgent.installOnOpenJDK());
 		
-		Foo foo = new Foo();
-		List<Bar> actual = Lists.newArrayList(foo.getBars());
-		List<Bar> expected = Lists.newArrayList(foo.getBars());
+		TestFoo foo = new TestFoo();
+		List<TestBar> actual = Lists.newArrayList(foo.getBars());
+		List<TestBar> expected = Lists.newArrayList(foo.getBars());
+		
 		assertEquals(expected, actual);
 	}
 	
-	public class Foo  {
-		int numberOfClass = 0;
+	@Test
+	public void shouldInteceptCallsWithParameters() {
+		AgentKryo.premain(rootDir + ";agentkryo.Test", ByteBuddyAgent.installOnOpenJDK());
 		
-		public Integer getNumberOfCalls() {
-			return ++numberOfClass;
+		TestFoo foo = new TestFoo();
+		assertEquals("into", foo.getBars(0));
+		assertEquals("broke", foo.getBars(1));
+		assertEquals("into", foo.getBars(0));
+	}
+
+	private void deleteDir(File dir) {
+		if (dir.isDirectory()) {
+			String[] children = dir.list();
+			for (String child : children) {
+				deleteDir(new File(dir, child));
+			}
 		}
 		
-		public Bar[] getBars(){
-			return new Bar[] {new Bar("walks", "into"), new Bar("leaves", "broke")};
-		}
+		dir.delete();
 	}
 	
-	public static class Bar  {
-		String foo;
-		String bar;
-		
-		public Bar(){};
-		
-		public Bar(String foo, String bar) {
-			this.foo = foo;
-			this.bar = bar;
-		}
-
-		@Override
-		public String toString() {
-			return "Bar [foo=" + foo + ", bar=" + bar + "]";
-		}
-		
-	}
 }
